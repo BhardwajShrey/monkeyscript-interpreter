@@ -60,6 +60,10 @@ func (p *Parser) expectPeek(t token.TokenType) bool {
     }
 }
 
+// ------------------------------------------------------
+//                  STATEMENT PARSERS
+// ------------------------------------------------------
+
 func (p *Parser) parseStatement() ast.Statement {
     switch p.currentToken.Type {
         case token.LET:
