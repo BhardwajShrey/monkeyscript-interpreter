@@ -7,6 +7,17 @@ import (
 	"monkey/token"
 )
 
+const (
+    _ int = iota
+    LOWEST
+    EQUALS          // ==
+    LESSGREATER     // > or <
+    SUM             // +
+    PRODUCT         // *
+    PREFIX          // -x or !x
+    CALL            // function(x)
+)
+
 type (
     prefixParseFn func() ast.Expression
     infixParseFn func(ast.Expression) ast.Expression
@@ -27,6 +38,9 @@ func New(l *lexer.Lexer) *Parser {
         l: l,
         errors: []string {},
     }
+
+    p.prefixParseFns = make(map [token.TokenType]prefixParseFn)
+    p.registerPrefix(token.IDENT, p.parseIdentifier)
 
     // read two tokens so that both currentToken and peekToken get set
     p.nextToken()
@@ -76,20 +90,16 @@ func (p *Parser) registerInfix(tokenType token.TokenType, fn infixParseFn) {
     p.infixParseFns[tokenType] = fn
 }
 
+func (p *Parser) parseIdentifier() ast.Expression {
+    return &ast.Identifier{
+        Token: p.currentToken,
+        Value: p.currentToken.Literal,
+    }
+}
+
 // ------------------------------------------------------
 //                  STATEMENT PARSERS
 // ------------------------------------------------------
-
-func (p *Parser) parseStatement() ast.Statement {
-    switch p.currentToken.Type {
-        case token.LET:
-            return p.parseLetStatement()
-        case token.RETURN:
-            return p.parseReturnStatement()
-    default:
-        return nil
-    }
-}
 
 func (p *Parser) parseLetStatement() *ast.LetStatement {
     statement := &ast.LetStatement{Token: p.currentToken}
@@ -124,6 +134,44 @@ func (p *Parser) parseReturnStatement() *ast.ReturnStatement {
 
     return statement
 }
+
+func (p *Parser) parseExpressionStatement() *ast.ExpressionStatement {
+    stmt := &ast.ExpressionStatement {Token: p.currentToken}
+
+    stmt.Expression = p.parseExpression(LOWEST)
+
+    // semicolon is optional
+    if p.peekTokenIs(token.SEMICOLON) {
+        p.nextToken()
+    }
+
+    return stmt
+}
+
+func (p *Parser) parseExpression(precedence int) ast.Expression {
+    prefix := p.prefixParseFns[p.currentToken.Type]
+    if prefix == nil {
+        return nil
+    }
+    leftExp := prefix()
+
+    return leftExp
+}
+
+func (p *Parser) parseStatement() ast.Statement {
+    switch p.currentToken.Type {
+        case token.LET:
+            return p.parseLetStatement()
+        case token.RETURN:
+            return p.parseReturnStatement()
+    default:
+        return p.parseExpressionStatement()
+    }
+}
+
+// ------------------------------------------------------
+//              DRIVER FUNCTION
+// ------------------------------------------------------
 
 func (p *Parser) ParseProgram() *ast.Program {
     program := &ast.Program{}
