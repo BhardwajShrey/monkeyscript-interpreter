@@ -5,6 +5,7 @@ import (
 	"monkey/ast"
 	"monkey/lexer"
 	"monkey/token"
+    "strconv"
 )
 
 const (
@@ -41,6 +42,7 @@ func New(l *lexer.Lexer) *Parser {
 
     p.prefixParseFns = make(map [token.TokenType]prefixParseFn)
     p.registerPrefix(token.IDENT, p.parseIdentifier)
+    p.registerPrefix(token.INT, p.parserIntegerLiteral)
 
     // read two tokens so that both currentToken and peekToken get set
     p.nextToken()
@@ -97,6 +99,21 @@ func (p *Parser) parseIdentifier() ast.Expression {
     }
 }
 
+func (p *Parser) parserIntegerLiteral() ast.Expression {
+    literal := &ast.IntegerLiteral{Token: p.currentToken}
+
+    value, err := strconv.ParseInt(p.currentToken.Literal, 0, 64)
+    if err != nil {
+        msg := fmt.Sprintf("could not parse %q as integer...", p.currentToken.Literal)
+        p.errors = append(p.errors, msg)
+        return nil
+    }
+
+    literal.Value = value
+
+    return literal
+}
+
 // ------------------------------------------------------
 //                  STATEMENT PARSERS
 // ------------------------------------------------------
@@ -149,11 +166,11 @@ func (p *Parser) parseExpressionStatement() *ast.ExpressionStatement {
 }
 
 func (p *Parser) parseExpression(precedence int) ast.Expression {
-    prefix := p.prefixParseFns[p.currentToken.Type]
-    if prefix == nil {
+    prefixFn := p.prefixParseFns[p.currentToken.Type]
+    if prefixFn == nil {
         return nil
     }
-    leftExp := prefix()
+    leftExp := prefixFn()
 
     return leftExp
 }
