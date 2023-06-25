@@ -234,6 +234,7 @@ func (p *Parser) noPrefixParseFunctionError(t token.TokenType) {
     p.errors = append(p.errors, msg)
 }
 
+// this function lies at the heart of Pratt parsing
 func (p *Parser) parseExpression(precedence int) ast.Expression {
     prefixFn := p.prefixParseFns[p.currentToken.Type]
     if prefixFn == nil {
