@@ -28,6 +28,7 @@ var precedences = map[token.TokenType]int {
     token.MINUS: SUM,
     token.SLASH: PRODUCT,
     token.ASTERISK: PRODUCT,
+    token.LPAREN: CALL,
 }
 
 type (
@@ -71,6 +72,7 @@ func New(l *lexer.Lexer) *Parser {
     p.registerInfix(token.NOT_EQ, p.parseInfixExpression)
     p.registerInfix(token.LT, p.parseInfixExpression)
     p.registerInfix(token.GT, p.parseInfixExpression)
+    p.registerInfix(token.LPAREN, p.parseCallExpression)
 
     // read two tokens so that both currentToken and peekToken get set
     p.nextToken()
@@ -180,8 +182,11 @@ func (p *Parser) parseLetStatement() *ast.LetStatement {
         return nil
     }
 
-    // skip till semicolon is found. We're skipping the expression for now
-    for !p.currentTokenIs(token.SEMICOLON) {
+    p.nextToken()
+
+    statement.Value = p.parseExpression(LOWEST)
+
+    if p.peekTokenIs(token.SEMICOLON) {
         p.nextToken()
     }
 
@@ -193,8 +198,9 @@ func (p *Parser) parseReturnStatement() *ast.ReturnStatement {
 
     p.nextToken()
 
-    // skipping expressions for now, till semicolon is found
-    for !p.currentTokenIs(token.SEMICOLON) {
+    statement.ReturnValue = p.parseExpression(LOWEST)
+
+    if p.peekTokenIs(token.SEMICOLON) {
         p.nextToken()
     }
 
@@ -336,6 +342,42 @@ func (p *Parser) parseFunctionParameters() []*ast.Identifier {
     }
 
     return identifiers
+}
+
+func (p *Parser) parseCallExpression(function ast.Expression) ast.Expression {
+    expression := &ast.CallExpression{
+        Token: p.currentToken,
+        Function: function,
+    }
+
+    expression.Arguments = p.parseCallArguments()
+
+    return expression
+}
+
+func (p *Parser) parseCallArguments() []ast.Expression {
+    args := []ast.Expression{}
+
+    if p.peekTokenIs(token.RPAREN) {
+        p.nextToken()
+        return args
+    }
+
+    p.nextToken()
+
+    args = append(args, p.parseExpression(LOWEST))
+
+    for p.peekTokenIs(token.COMMA) {
+        p.nextToken()
+        p.nextToken()
+        args = append(args, p.parseExpression(LOWEST))
+    }
+
+    if !p.expectPeek(token.RPAREN) {
+        return nil
+    }
+
+    return args
 }
 
 func (p *Parser) parsePrefixExpression() ast.Expression {
