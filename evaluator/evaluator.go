@@ -68,12 +68,21 @@ func evalInfixExpression(operator string, left object.Object, right object.Objec
     switch {
     case left.Type() == object.INTEGER_OBJ && right.Type() == object.INTEGER_OBJ:
         return evalIntegerInfixExpression(operator, left, right)
+    // since we're handling pointers in the next few statements, check for all other operands
+    // will have to happen before them. Otherwise 5 == 5 would evaluate to false since new pointers
+    // are initialized whenever an Integer object is created. Comparison between booleans is therefore
+    // faster as the interpreter has to unwrap Integer objects before a comparison is made
+    case operator == "==":
+        return boolToBoolean(left == right)
+    case operator == "!=":
+        return boolToBoolean(left != right)
     default:
         return NULL
     }
 }
 
 func evalIntegerInfixExpression(operator string, left object.Object, right object.Object) object.Object {
+    // this is where unwrapping of the value happens
     leftVal := left.(*object.Integer).Value
     rightVal := right.(*object.Integer).Value
 
