@@ -19,6 +19,8 @@ func Eval(node ast.Node) object.Object {
             return evalStatements(node.Statements)
         case *ast.ExpressionStatement:
             return Eval(node.Expression)
+        case *ast.BlockStatement:
+            return evalStatements(node.Statements)
         // EXPRESSIONS
         case *ast.IntegerLiteral:
             return &object.Integer{Value: node.Value}
@@ -31,6 +33,8 @@ func Eval(node ast.Node) object.Object {
             return evalInfixExpression(node.Operator, left, right)
         case *ast.Boolean:
             return boolToBoolean(node.Value)
+        case *ast.IfExpression:
+            return evalIfExpression(node)
     }
 
     return nil
@@ -128,4 +132,31 @@ func evalMinusPrefixOperatorExpression(right object.Object) object.Object {
 
     value := right.(*object.Integer).Value
     return &object.Integer{Value: -value}
+}
+
+func isTruthy(obj object.Object) bool {
+    switch obj {
+    case NULL:
+        return false
+    case TRUE:
+        return true
+    case FALSE:
+        return false
+    default:
+        return true
+    }
+}
+
+// consequence is evaluated when condition is truthy i.e. not null and not false
+// can design this to have consequence evaluated when condition is strictly true as well
+func evalIfExpression(ie *ast.IfExpression) object.Object {
+    condition := Eval(ie.Condition)
+
+    if isTruthy(condition) {
+        return Eval(ie.Consequence)
+    } else if (ie.Alternative != nil) {
+        return Eval(ie.Alternative)
+    } else {
+        return NULL
+    }
 }
