@@ -142,6 +142,8 @@ func evalInfixExpression(operator string, left object.Object, right object.Objec
     switch {
     case left.Type() == object.INTEGER_OBJ && right.Type() == object.INTEGER_OBJ:
         return evalIntegerInfixExpression(operator, left, right)
+    case left.Type() == object.STRING_OBJ && right.Type() == object.STRING_OBJ:
+        return evalStringInfixExpression(operator, left, right)
     // since we're handling pointers in the next few statements, check for all other operands
     // will have to happen before them. Otherwise 5 == 5 would evaluate to false since new pointers
     // are initialized whenever an Integer object is created. Comparison between booleans is therefore
@@ -155,6 +157,17 @@ func evalInfixExpression(operator string, left object.Object, right object.Objec
     default:
         return newError("unknown operator: %s %s %s", left.Type(), operator, right.Type())
     }
+}
+
+func evalStringInfixExpression(operator string, left object.Object, right object.Object) object.Object {
+    // supporting only concat for now. Can support == and != later
+    if operator != "+" {
+        return newError("unknown operator: %s %s %s", left.Type(), operator, right.Type())
+    }
+
+    leftVal := left.(*object.String).Value
+    rightVal := right.(*object.String).Value
+    return &object.String{Value: leftVal + rightVal}
 }
 
 func evalIntegerInfixExpression(operator string, left object.Object, right object.Object) object.Object {
