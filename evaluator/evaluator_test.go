@@ -350,21 +350,40 @@ func TestBuiltinFunctions(t *testing.T) {
         {`len("one", "two")`, "wrong number of arguments. got=2, want=1"},
     }
 
-    for _, tt := range tests { evaluated := testEval(tt.input)
-    
-    switch expected := tt.expected.(type) { 
-    case int:
-        testIntegerObject(t, evaluated, int64(expected))
-    case string:
-        errObj, ok := evaluated.(*object.Error)
-        if !ok {
-            t.Errorf("object is not Error. got=%T (%+v)", evaluated, evaluated)
-            continue
+    for _, tt := range tests {
+        evaluated := testEval(tt.input)
+
+        switch expected := tt.expected.(type) { 
+        case int:
+            testIntegerObject(t, evaluated, int64(expected))
+        case string:
+            errObj, ok := evaluated.(*object.Error)
+            if !ok {
+                t.Errorf("object is not Error. got=%T (%+v)", evaluated, evaluated)
+                continue
+            }
+
+            if errObj.Message != expected {
+                t.Errorf("wrong error message. expected=%q, got=%q", expected, errObj.Message)
+            } 
         }
-        
-        if errObj.Message != expected {
-            t.Errorf("wrong error message. expected=%q, got=%q", expected, errObj.Message)
-        } 
     }
 }
+
+func TestArrayLiterals(t *testing.T) {
+    input := "[1, 2 * 2, 3 + 3]"
+
+    evaluated := testEval(input)
+    result, ok := evaluated.(*object.Array)
+    if !ok {
+        t.Fatalf("object is not Array. got=%T (%+v)", evaluated, evaluated)
+    }
+
+    if len(result.Elements) != 3 {
+        t.Fatalf("array has wrong num of elements. got=%d", len(result.Elements))
+    }
+    
+    testIntegerObject(t, result.Elements[0], 1)
+    testIntegerObject(t, result.Elements[1], 4)
+    testIntegerObject(t, result.Elements[2], 6)
 }
